@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Value Combiner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="banner" id="banner">
+        <div class="banner-title" id="bannerTitle">Value Combiner</div>
+        <div class="banner-stats" id="bannerStats">
+            <div class="stat-item">
+                <span class="stat-label">Successful:</span>
+                <button class="stat-value pass-badge" id="passCount" onclick="openDrawer('success')" title="View successful messages">0</button>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Exceptions:</span>
+                <button class="stat-value exception-badge" id="exceptionCount" onclick="openDrawer('error')" title="View exception messages">0</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <aside class="history-drawer" id="historyDrawer" aria-hidden="true">
+        <div class="drawer-header">
+            <h2 id="drawerTitle">Messages</h2>
+            <button class="drawer-close" onclick="closeDrawer()" aria-label="Close drawer">x</button>
+        </div>
+        <div class="drawer-body" id="drawerBody"></div>
+    </aside>
+
+    <main class="container">
+        <div class="header">
+            <h1>Value Combiner</h1>
+            <p>Select operation type and enter values</p>
+        </div>
+
+        <div class="type-selector" id="typeSelector">
+            <button id="integerTypeBtn" class="type-btn active" onclick="setType('integer')">Integer</button>
+            <button id="doubleTypeBtn" class="type-btn" onclick="setType('double')">Decimal</button>
+            <button id="stringTypeBtn" class="type-btn" onclick="setType('string')">Text</button>
+        </div>
+
+        <div class="inputs-container" id="inputsContainer">
+            <div class="input-group" id="inputGroup1">
+                <input id="inputValue1" type="text" placeholder="Enter value 1" class="input-value">
+                <button id="removeBtn1" class="remove-btn" onclick="removeInput(this)">&times;</button>
+            </div>
+            <div class="input-group" id="inputGroup2">
+                <input id="inputValue2" type="text" placeholder="Enter value 2" class="input-value">
+                <button id="removeBtn2" class="remove-btn" onclick="removeInput(this)">&times;</button>
+            </div>
+        </div>
+
+        <div class="controls" id="controls">
+            <button class="add-btn" id="addBtn" onclick="addInput()" title="Add input (max 4)">+</button>
+            <button id="calculateBtn" class="calculate-btn" onclick="calculate()">Calculate</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <span class="spinner" id="spinner"></span>Processing...
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div class="result-label" id="resultLabel">Result</div>
+            <div class="result-value" id="resultValue"></div>
+        </div>
+    </main>
+
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
