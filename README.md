@@ -86,6 +86,36 @@ ValueCombinerLambdaHandler::handleRequest
 
 Connect it to API Gateway with a `POST /api/calculate` route. The handler also returns CORS headers for browser requests.
 
+## Run UI Automation Tests
+
+The Selenium TestNG smoke suite is under `src/test/java/ui`.
+
+Start the local app first:
+
+```powershell
+.\mvnw.cmd compile exec:java
+```
+
+Then run the UI tests in another terminal:
+
+```powershell
+.\mvnw.cmd test
+```
+
+If the app is running on another port:
+
+```powershell
+.\mvnw.cmd test "-DbaseUrl=http://localhost:8081" "-Dheadless=true"
+```
+
+Default UI test settings live in `src/test/resources/test.properties`.
+
+The suite also creates an ExtentReports HTML report at:
+
+```text
+target/extent-reports/extent-report.html
+```
+
 ## Generate The Static Report
 
 `ValueCombinerReportGenerator.java` creates `value_combiner_results.html` from the built-in test cases.

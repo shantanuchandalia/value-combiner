@@ -1,0 +1,11 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Value Combiner UI Suite" parallel="false">
+    <listeners>
+        <listener class-name="ui.listeners.ExtentReportListener"/>
+    </listeners>
+    <test name="UI Smoke Tests">
+        <classes>
+            <class name="ui.tests.ValueCombinerCalculationTest"/>
+        </classes>
+    </test>
+</suite>
