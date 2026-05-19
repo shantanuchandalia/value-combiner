@@ -29,9 +29,30 @@ Java-BAsics-practice/
 
 ## Requirements
 
-- Java Development Kit (JDK), Java 8 or higher
+- Java Development Kit (JDK) 17
 - VS Code with Extension Pack for Java
 - Maven, or the included Maven Wrapper
+
+Make sure `JAVA_HOME` and `PATH` point to JDK 17 before running Maven. The build enforces this requirement.
+
+On this Windows machine, JDK 17 is installed at:
+
+```text
+C:\Program Files\OpenLogic\jdk-17.0.18.8-hotspot
+```
+
+For the current PowerShell session, run:
+
+```powershell
+.\scripts\use-java17.ps1
+```
+
+Or set it manually:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\OpenLogic\jdk-17.0.18.8-hotspot"
+$env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
+```
 
 ## Run The Dashboard Locally
 
@@ -151,6 +172,42 @@ target/site/jacoco/jacoco.csv
 ```
 
 The coverage profile focuses on application logic and excludes local-server, Lambda-adapter, and static-report adapter classes from the report.
+
+## Run Static Quality Checks
+
+The `quality` Maven profile runs Checkstyle, PMD/CPD, and SpotBugs.
+
+```powershell
+.\mvnw.cmd verify "-Pquality"
+```
+
+Quality reports are generated under `target/` and should be reviewed before merging larger changes.
+
+## Run Security Scan
+
+The `security-scan` Maven profile runs OWASP Dependency-Check for known dependency vulnerabilities.
+
+```powershell
+.\mvnw.cmd verify "-Psecurity-scan"
+```
+
+Dependency-Check reports are generated under `target/`. High or critical findings should be fixed or explicitly documented with a reviewed suppression.
+
+For faster NVD updates, set an API key before running the scan:
+
+```powershell
+$env:NVD_API_KEY = "your-nvd-api-key"
+```
+
+The profile reads `NVD_API_KEY` from the environment and reuses the local NVD cache for one week.
+
+## Run SonarQube Or SonarCloud Analysis
+
+Sonar analysis is optional locally because it requires a SonarQube/SonarCloud project and token.
+
+```powershell
+.\mvnw.cmd clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar "-Dsonar.token=$env:SONAR_TOKEN"
+```
 
 ## Generate The Static Report
 
