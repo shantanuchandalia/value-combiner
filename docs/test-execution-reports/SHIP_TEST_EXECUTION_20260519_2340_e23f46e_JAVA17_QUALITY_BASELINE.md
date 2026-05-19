@@ -4,10 +4,10 @@
 
 | Field | Value |
 |---|---|
-| Report file | `SHIP_TEST_EXECUTION_20260519_2340_d4d0beb_JAVA17_QUALITY_BASELINE.md` |
+| Report file | `SHIP_TEST_EXECUTION_20260519_2340_e23f46e_JAVA17_QUALITY_BASELINE.md` |
 | Naming convention | `SHIP_TEST_EXECUTION_YYYYMMDD_HHMM_<commit>_<release-scope>.md` |
 | Purpose | Non-overwriting evidence file for a logically shippable project checkpoint |
-| Commit reference | `d4d0beb` |
+| Commit reference | `e23f46e` |
 | Working state | Java 17 static quality/security baseline commit |
 | Execution date/time | `2026-05-19 23:40 IST` |
 | Runtime | OpenLogic OpenJDK `17.0.18` |
