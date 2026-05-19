@@ -3,6 +3,12 @@
     <listeners>
         <listener class-name="ui.listeners.ExtentReportListener"/>
     </listeners>
+    <test name="Core and API Tests">
+        <classes>
+            <class name="ValueCombinerUnitTest"/>
+            <class name="ValueCombinerServiceTest"/>
+        </classes>
+    </test>
     <test name="UI Smoke Tests">
         <classes>
             <class name="ui.tests.ValueCombinerCalculationTest"/>

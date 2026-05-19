@@ -151,6 +151,14 @@ public class ValueCombinerWebServer {
     }
 
     private static void addCorsHeaders(HttpExchange exchange) {
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", allowedOrigin());
+    }
+
+    private static String allowedOrigin() {
+        String origin = System.getenv("ALLOWED_ORIGIN");
+        if (origin == null || origin.trim().isEmpty()) {
+            return "http://localhost:8080";
+        }
+        return origin.trim();
     }
 }

@@ -125,6 +125,11 @@ function resetInputs() {
     });
 }
 
+function updateCounters() {
+    document.getElementById("passCount").textContent = calculationHistory.filter(item => item.status === "success").length;
+    document.getElementById("exceptionCount").textContent = calculationHistory.filter(item => item.status === "error").length;
+}
+
 async function calculate() {
     const container = document.getElementById("inputsContainer");
     const inputs = Array.from(container.querySelectorAll(".input-value")).map(inp => inp.value);
@@ -155,11 +160,6 @@ async function calculate() {
         const resultContainer = document.getElementById("resultContainer");
         const resultValue = document.getElementById("resultValue");
         const resultLabel = document.getElementById("resultLabel");
-        const passCount = document.getElementById("passCount");
-        const exceptionCount = document.getElementById("exceptionCount");
-
-        passCount.textContent = data.passCount;
-        exceptionCount.textContent = data.exceptionCount;
 
         calculationHistory.push({
             status: data.status,
@@ -167,6 +167,7 @@ async function calculate() {
             inputs: inputs,
             message: `${data.status === "success" ? "PASS" : "FAIL"}: ${data.result}`
         });
+        updateCounters();
 
         if (data.status === "success") {
             resultContainer.classList.remove("result-error");

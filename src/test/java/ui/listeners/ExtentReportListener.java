@@ -20,17 +20,20 @@ public class ExtentReportListener implements ITestListener {
     private static ExtentReports extentReports;
 
     @Override
-    public void onStart(ITestContext context) {
+    public synchronized void onStart(ITestContext context) {
+        if (extentReports != null) {
+            return;
+        }
+
         ExtentSparkReporter sparkReporter = new ExtentSparkReporter(REPORT_PATH.toString());
         sparkReporter.config().setDocumentTitle("Value Combiner UI Automation Report");
-        sparkReporter.config().setReportName("Value Combiner Smoke Tests");
+        sparkReporter.config().setReportName("Value Combiner Automation Tests");
 
         extentReports = new ExtentReports();
         extentReports.attachReporter(sparkReporter);
         extentReports.setSystemInfo("Suite", context.getSuite().getName());
-        extentReports.setSystemInfo("Test", context.getName());
         extentReports.setSystemInfo("Base URL", TestConfig.baseUrl());
-        extentReports.setSystemInfo("Browser", TestConfig.browser());
+        extentReports.setSystemInfo("Browser", "chrome");
         extentReports.setSystemInfo("Headless", String.valueOf(TestConfig.headless()));
     }
 
@@ -38,12 +41,14 @@ public class ExtentReportListener implements ITestListener {
     public void onTestStart(ITestResult result) {
         ExtentTest test = extentReports.createTest(result.getMethod().getMethodName());
         test.assignCategory(result.getTestClass().getName());
+        test.assignCategory(result.getTestContext().getName());
         CURRENT_TEST.set(test);
     }
 
     @Override
     public void onTestSuccess(ITestResult result) {
         CURRENT_TEST.get().log(Status.PASS, "Test passed.");
+        CURRENT_TEST.remove();
     }
 
     @Override
@@ -51,11 +56,13 @@ public class ExtentReportListener implements ITestListener {
         ExtentTest test = CURRENT_TEST.get();
         test.log(Status.FAIL, result.getThrowable());
         attachScreenshotIfAvailable(test, result);
+        CURRENT_TEST.remove();
     }
 
     @Override
     public void onTestSkipped(ITestResult result) {
         CURRENT_TEST.get().log(Status.SKIP, result.getThrowable());
+        CURRENT_TEST.remove();
     }
 
     @Override
@@ -63,7 +70,6 @@ public class ExtentReportListener implements ITestListener {
         if (extentReports != null) {
             extentReports.flush();
         }
-        CURRENT_TEST.remove();
     }
 
     private void attachScreenshotIfAvailable(ExtentTest test, ITestResult result) {

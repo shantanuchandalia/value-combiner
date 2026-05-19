@@ -1,10 +1,10 @@
 # Selenium TestNG UI Automation Framework Architecture
 
-This document proposes a UI automation framework for the Value Combiner app using Selenium WebDriver, TestNG, and Maven. It is intentionally a review document first; implementation can be added after this structure is approved.
+This document describes the implemented automation framework for the Value Combiner app using Selenium WebDriver, TestNG, Maven, and ExtentReports.
 
 ## Goals
 
-- Test the browser UI for integer, decimal, text, and validation flows.
+- Test core calculation logic, API/service behavior, and browser UI flows.
 - Keep tests readable through Page Object Model.
 - Support local execution against `ValueCombinerWebServer`.
 - Support future execution against deployed AWS frontend/API URLs.
@@ -13,8 +13,10 @@ This document proposes a UI automation framework for the Value Combiner app usin
 
 ## Proposed Test Scope
 
-Initial UI regression scenarios:
+Initial automated scope:
 
+- Core integer, decimal, and text calculation checks.
+- API/service success and error response checks.
 - Page loads successfully.
 - Integer calculation returns expected sum.
 - Decimal calculation returns expected sum.
@@ -32,6 +34,8 @@ Initial UI regression scenarios:
 src/
 +-- test/
     +-- java/
+    |   +-- ValueCombinerUnitTest.java
+    |   +-- ValueCombinerServiceTest.java
     |   +-- ui/
     |       +-- base/
     |       |   +-- BaseTest.java
@@ -50,6 +54,7 @@ src/
     |           +-- ScreenshotUtil.java
     |           +-- WaitUtil.java
     +-- resources/
+        +-- calculation-test-data.properties
         +-- testng.xml
         +-- test.properties
 ```
@@ -57,7 +62,7 @@ src/
 ## Architecture Layers
 
 ```text
-TestNG test classes
+Core/API TestNG tests and UI TestNG tests
         |
         v
 Page objects
@@ -86,7 +91,7 @@ Responsibilities:
 - Start browser before each test method.
 - Navigate to base URL.
 - Quit browser after each test method.
-- Capture screenshot when a test fails.
+- Leave screenshot capture to the ExtentReports listener.
 - Keep test setup consistent across all UI tests.
 
 ### `DriverFactory`
@@ -95,7 +100,7 @@ Creates Selenium `WebDriver` instances.
 
 Responsibilities:
 
-- Create Chrome, Edge, or Firefox drivers.
+- Create ChromeDriver instances.
 - Support headless mode.
 - Apply common browser options.
 - Avoid test classes directly constructing browser drivers.
@@ -118,13 +123,12 @@ Responsibilities:
 
 - Read values from `test.properties`.
 - Allow override from Maven command-line system properties.
-- Provide values such as browser, base URL, timeout, and headless mode.
+- Provide values such as base URL, timeout, and headless mode.
 
 Example properties:
 
 ```properties
 baseUrl=http://localhost:8080
-browser=chrome
 headless=false
 timeoutSeconds=10
 ```
@@ -152,6 +156,21 @@ Tests should not directly use raw Selenium locators unless there is a good reaso
 
 ### Test Classes
 
+`ValueCombinerUnitTest`
+
+- Core integer addition.
+- Overflow handling.
+- Decimal addition.
+- Invalid decimal handling.
+- Text concatenation.
+- Null text handling.
+
+`ValueCombinerServiceTest`
+
+- Successful API response.
+- Invalid calculation error response.
+- Malformed JSON error response.
+
 `ValueCombinerCalculationTest`
 
 - Valid integer addition.
@@ -174,6 +193,11 @@ Tests should not directly use raw Selenium locators unless there is a good reaso
 
 ### Utilities
 
+`TestData`
+
+- Loads calculation data from `src/test/resources/calculation-test-data.properties`.
+- Exposes named data objects to tests.
+
 `WaitUtil`
 
 - Central wrapper around `WebDriverWait`.
@@ -184,15 +208,20 @@ Tests should not directly use raw Selenium locators unless there is a good reaso
 - Saves screenshots under `target/screenshots`.
 - Names screenshots by test method and timestamp.
 
-## Maven Dependencies To Add Later
+## Maven Dependencies
 
-Proposed dependencies:
+Primary dependencies:
 
 ```xml
 <dependency>
     <groupId>org.seleniumhq.selenium</groupId>
-    <artifactId>selenium-java</artifactId>
-    <version>4.x.x</version>
+    <artifactId>selenium-chrome-driver</artifactId>
+    <scope>test</scope>
+</dependency>
+
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-support</artifactId>
     <scope>test</scope>
 </dependency>
 
@@ -206,12 +235,19 @@ Proposed dependencies:
 <dependency>
     <groupId>io.github.bonigarcia</groupId>
     <artifactId>webdrivermanager</artifactId>
-    <version>5.x.x</version>
+    <scope>test</scope>
+</dependency>
+
+<dependency>
+    <groupId>com.aventstack</groupId>
+    <artifactId>extentreports</artifactId>
     <scope>test</scope>
 </dependency>
 ```
 
-Proposed plugin:
+The main app also uses Jackson for DTO-based JSON parsing and serialization.
+
+Surefire runs TestNG through `src/test/resources/testng.xml`:
 
 ```xml
 <plugin>
@@ -226,18 +262,23 @@ Proposed plugin:
 </plugin>
 ```
 
-Exact versions should be finalized when we implement, based on the Java version used by the project and available dependency compatibility.
-
-## Proposed `testng.xml`
+## Current `testng.xml`
 
 ```xml
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="Value Combiner UI Suite" parallel="false">
-    <test name="UI Regression">
+    <listeners>
+        <listener class-name="ui.listeners.ExtentReportListener"/>
+    </listeners>
+    <test name="Core and API Tests">
+        <classes>
+            <class name="ValueCombinerUnitTest"/>
+            <class name="ValueCombinerServiceTest"/>
+        </classes>
+    </test>
+    <test name="UI Smoke Tests">
         <classes>
             <class name="ui.tests.ValueCombinerCalculationTest"/>
-            <class name="ui.tests.ValueCombinerValidationTest"/>
-            <class name="ui.tests.ValueCombinerHistoryTest"/>
         </classes>
     </test>
 </suite>
@@ -265,10 +306,10 @@ Local execution flow:
 .\mvnw.cmd test
 ```
 
-Override browser or URL:
+Override URL or headless mode:
 
 ```powershell
-.\mvnw.cmd test "-DbaseUrl=http://localhost:8081" "-Dbrowser=edge" "-Dheadless=true"
+.\mvnw.cmd test "-DbaseUrl=http://localhost:8081" "-Dheadless=true"
 ```
 
 AWS execution flow:
@@ -284,6 +325,7 @@ Initial reporting:
 - TestNG default reports under `target/surefire-reports`.
 - Screenshots under `target/screenshots`.
 - ExtentReports HTML report under `target/extent-reports/extent-report.html`.
+- JaCoCo line and branch coverage under `target/site/jacoco`.
 
 Possible future reporting:
 
@@ -304,9 +346,28 @@ Suggested pipeline stages:
 ```text
 compile
 unit/API checks
+coverage checks
 start local app
 ui regression tests
 publish reports
+```
+
+## Coverage
+
+Coverage uses JaCoCo through the Maven `coverage` profile:
+
+```powershell
+.\mvnw.cmd clean verify "-Pcoverage"
+```
+
+The coverage profile runs `coverage-testng.xml`, which includes the core and API tests only. Browser UI tests remain part of the regular `testng.xml` suite because Selenium execution validates end-to-end behavior rather than contributing stable Java line coverage.
+
+Initial report paths:
+
+```text
+target/site/jacoco/index.html
+target/site/jacoco/jacoco.xml
+target/site/jacoco/jacoco.csv
 ```
 
 ## Design Principles
@@ -314,21 +375,21 @@ publish reports
 - Page Object Model: keeps locators and UI actions out of test classes.
 - Single Responsibility: driver creation, config, page behavior, and tests stay separate.
 - Reusability: common setup, waits, and screenshots are shared.
-- Configuration Over Hardcoding: base URL, browser, and headless mode are configurable.
+- Configuration Over Hardcoding: base URL, headless mode, and test data are configurable.
 - Fail Fast With Evidence: failed tests capture screenshots.
 - Local And Cloud Friendly: same suite can run against localhost or deployed AWS URL.
 
 ## First Implementation Milestone
 
-Recommended first cut:
+Implemented first cut:
 
 - Add Maven dependencies and Surefire plugin.
 - Add `testng.xml`.
 - Add `test.properties`.
 - Add `DriverFactory`, `DriverManager`, `BaseTest`, and `ValueCombinerPage`.
-- Add three smoke tests:
+- Add core/API checks and three UI smoke tests:
   - integer addition
   - decimal addition
   - text concatenation
 
-After those pass, expand into validation and history tests.
+Next expansion: validation tests, history drawer tests, CI execution, and deployed-environment smoke runs.

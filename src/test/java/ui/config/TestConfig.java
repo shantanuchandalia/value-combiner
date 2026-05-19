@@ -15,10 +15,6 @@ public final class TestConfig {
         return get("baseUrl", "http://localhost:8080");
     }
 
-    public static String browser() {
-        return get("browser", "chrome").toLowerCase();
-    }
-
     public static boolean headless() {
         return Boolean.parseBoolean(get("headless", "false"));
     }

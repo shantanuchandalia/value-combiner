@@ -7,7 +7,6 @@ import org.testng.annotations.BeforeMethod;
 import ui.config.TestConfig;
 import ui.driver.DriverFactory;
 import ui.driver.DriverManager;
-import ui.utils.ScreenshotUtil;
 
 public abstract class BaseTest {
     @BeforeMethod
@@ -19,9 +18,6 @@ public abstract class BaseTest {
 
     @AfterMethod(alwaysRun = true)
     public void tearDown(ITestResult result) {
-        if (!result.isSuccess()) {
-            ScreenshotUtil.capture(DriverManager.getDriver(), result.getMethod().getMethodName());
-        }
         DriverManager.quitDriver();
     }
 

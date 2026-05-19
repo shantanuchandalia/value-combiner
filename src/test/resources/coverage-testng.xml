@@ -1,0 +1,9 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Value Combiner Coverage Suite" parallel="false">
+    <test name="Core and API Coverage Tests">
+        <classes>
+            <class name="ValueCombinerUnitTest"/>
+            <class name="ValueCombinerServiceTest"/>
+        </classes>
+    </test>
+</suite>
