@@ -87,7 +87,7 @@ function addInput() {
         group.id = `inputGroup${index}`;
         group.className = "input-group removable";
         group.innerHTML = `
-            <input id="inputValue${index}" type="text" placeholder="Enter value ${index}" class="input-value">
+            <input id="inputValue${index}" type="text" placeholder="Enter value" class="input-value">
             <button id="removeBtn${index}" class="remove-btn" onclick="removeInput(this)">&times;</button>
         `;
         container.appendChild(group);
