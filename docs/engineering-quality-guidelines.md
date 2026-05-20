@@ -1,41 +1,38 @@
-# Engineering And QA Guidelines For New Projects
+# Engineering Quality Guidelines
 
-Use this document as a reusable checklist when starting a new project. It captures the engineering, testing, reporting, and deployment discipline followed in the Value Combiner project.
+Use this as a crisp baseline for new Java projects. Keep it practical: start small, keep responsibilities clear, automate the important checks, and expand only when the project needs it.
 
-## Java 17 Baseline
+## 1. Project Baseline
 
-Use Java 17 as the default runtime and compile target for new Java projects.
+- Use Java 17 as the default runtime and compile target.
+- Use the Maven Wrapper so builds are repeatable across machines.
+- Document required Java, Maven, and environment setup in `README.md`.
+- Keep application code in `src/main` and test code in `src/test`.
+- Avoid machine-specific paths, ports, tokens, or credentials in source code.
+- Keep generated reports, screenshots, build output, and temporary files out of source control unless intentionally published.
 
-Minimum expectations:
+## 2. Architecture
 
-- Set Maven compiler release to `17`.
-- Use a local JDK 17 for development and CI.
-- Keep beginner-friendly code readable, but allow Java 17 language and runtime compatibility.
-- Document the Java version in the README and build configuration.
-- Avoid relying on machine-specific JDK defaults.
+Separate responsibilities early:
 
-## 1. Start With A Clean Architecture
+- Put business logic in service/domain classes.
+- Keep web server, controller, Lambda, CLI, or UI code as thin adapters.
+- Use explicit request and response DTOs for API boundaries.
+- Keep frontend files separated into HTML, CSS, JavaScript, and config.
+- Create utility classes only when the behavior is genuinely reused.
+- Avoid mixing unrelated refactors with feature work.
 
-Separate responsibilities from the beginning:
-
-- Keep frontend and backend code separate.
-- Keep HTML, CSS, and JavaScript in separate files.
-- Keep business logic independent from web server, Lambda, controller, or UI adapter code.
-- Keep request and response models as explicit DTOs instead of passing unstructured maps or manually parsing strings.
-- Keep test code under `src/test` and application code under `src/main`.
-
-Recommended backend structure:
+Recommended Java layout:
 
 ```text
 src/main/java/
-+-- model/request-response DTOs
-+-- service/business logic
-+-- local server/controller adapter
-+-- cloud/Lambda adapter
-+-- utility classes only when genuinely reusable
++-- model/        request and response DTOs
++-- service/      business logic
++-- adapter/      web, Lambda, CLI, persistence, or framework glue
++-- config/       configuration loading
 ```
 
-Recommended frontend structure:
+Recommended static frontend layout:
 
 ```text
 src/main/resources/static/
@@ -45,41 +42,35 @@ src/main/resources/static/
 +-- config.js
 ```
 
-## 2. Design For Local And Cloud Hosting
+## 3. Configuration
 
-Build the application so it can run locally and also move to cloud hosting without rewriting core logic.
+Anything that changes by environment must be configurable:
 
-For web apps:
+- App port and base URL.
+- API base URL.
+- Browser/headless mode and timeouts.
+- Allowed CORS origin.
+- Report output locations when needed.
+- Tokens, credentials, and secret values.
 
-- Serve static frontend locally for development.
-- Keep API calls configurable through `config.js`, environment variables, or system properties.
-- Keep backend APIs stateless when possible.
-- Avoid storing session counters or UI-only state in backend services unless the product requires it.
-- Keep CORS configurable through an environment variable such as `ALLOWED_ORIGIN`.
-- Treat local server classes and cloud handler classes as thin adapters around the same service layer.
+Preferred order:
 
-For AWS-style deployment:
+1. Environment variable or system property.
+2. Application/test properties file.
+3. Safe local default.
 
-```text
-Static frontend -> S3/CloudFront
-API endpoint     -> API Gateway
-Backend logic    -> Lambda
-Shared logic     -> service classes
-```
+Never commit real secrets.
 
-## 3. Use Explicit Data Contracts
+## 4. API Contracts
 
-Do not manually parse JSON with string operations.
-
-Preferred approach:
-
-- Create request DTOs.
-- Create response DTOs.
+- Do not parse JSON with string operations.
 - Use a JSON library such as Jackson.
-- Validate mandatory request fields.
-- Return consistent success and error response formats.
+- Validate mandatory request fields before processing.
+- Return consistent success and error responses.
+- Keep user-facing errors clear and avoid exposing stack traces.
+- Test malformed, empty, invalid, and unknown request cases.
 
-Example response shape:
+Example:
 
 ```json
 {
@@ -88,388 +79,253 @@ Example response shape:
 }
 ```
 
-Error responses should also follow the same contract:
-
 ```json
 {
   "status": "error",
-  "result": "Exception: Need at least 2 inputs"
+  "result": "Need at least 2 inputs"
 }
 ```
 
-## 4. Keep Business Logic Testable
+## 5. Testability
 
-Business logic should be callable directly from unit tests without starting a server, browser, or cloud runtime.
+Business logic must be testable without a browser, server, database, or cloud runtime.
 
 Good signs:
 
-- Core classes have small public methods.
-- Service classes can be tested with plain Java tests.
-- Web server and Lambda handlers only translate requests and responses.
-- Browser tests are not the only way to validate logic.
+- Core methods are small and deterministic.
+- Service tests call Java classes directly.
+- Adapters translate requests/responses but do not own business rules.
+- UI tests validate user journeys, not basic calculation or domain rules.
 
 Avoid:
 
-- Putting calculations directly inside UI JavaScript only.
-- Putting logic directly inside Lambda handler methods.
-- Requiring Selenium to validate basic business rules.
+- Business logic only in JavaScript.
+- Business logic inside Lambda/controller methods.
+- Selenium as the only way to verify core behavior.
 
-## 5. Testing Strategy
+## 6. Testing Strategy
 
-Use a layered test approach.
+Use layered tests.
 
 ### Unit Tests
 
-Purpose:
+Cover pure business rules:
 
-- Validate pure business logic.
-- Cover success, failure, boundary, and edge cases.
-- Run fast without browser or server.
-
-Examples:
-
-- Integer addition.
-- Integer overflow and underflow.
-- Decimal addition.
-- NaN and infinite decimal rejection.
-- String concatenation.
-- Null handling.
+- Happy paths.
+- Boundary values.
+- Empty and null inputs where applicable.
+- Invalid formats.
+- Overflow/underflow.
+- Rounding or precision behavior.
+- Duplicate or repeated operations where relevant.
 
 ### Service/API Tests
 
-Purpose:
+Cover request and response behavior:
 
-- Validate request parsing.
-- Validate response contracts.
-- Validate API success and error behavior without browser automation.
-
-Examples:
-
-- Successful integer request returns `status=success`.
-- Invalid number returns `status=error`.
-- Malformed JSON returns `status=error`.
-- Empty request body returns `status=error`.
-- Unknown data type returns `status=error`.
+- Successful request returns the expected contract.
+- Invalid input returns a predictable error.
+- Malformed JSON is handled safely.
+- Empty request body is handled safely.
+- Unknown enum/type/action values are rejected.
 
 ### UI Smoke Tests
 
-Purpose:
-
-- Validate the user journey in the browser.
-- Keep these focused and stable.
-
-Examples:
+Keep these few and stable:
 
 - Page loads.
-- Integer calculation works from UI.
-- Decimal calculation works from UI.
-- Text concatenation works from UI.
-- Required validation message appears.
-- Success and failure counters update.
-- History drawer displays useful messages.
+- Critical user journey works.
+- Required validation is visible.
+- Success and failure states render correctly.
 
 ### UI Regression Tests
 
-Purpose:
+Add after smoke tests are stable:
 
-- Expand browser coverage after smoke tests are stable.
-- Cover field validation, add/remove input behavior, history, and important edge cases.
+- Field validation combinations.
+- Add/remove/edit flows.
+- History, filters, sorting, or saved state.
+- Important browser-specific behavior.
 
-## 6. UI Automation Framework Standards
+## 7. UI Automation Standards
 
 Use Page Object Model for Selenium tests.
 
-Recommended structure:
+Recommended layout:
 
 ```text
 src/test/java/ui/
 +-- base/
-|   +-- BaseTest.java
 +-- config/
-|   +-- TestConfig.java
 +-- driver/
-|   +-- DriverFactory.java
-|   +-- DriverManager.java
 +-- listeners/
-|   +-- ExtentReportListener.java
 +-- pages/
-|   +-- FeaturePage.java
 +-- tests/
-|   +-- FeatureSmokeTest.java
 +-- utils/
-    +-- ScreenshotUtil.java
-    +-- WaitUtil.java
-    +-- TestData.java
 ```
 
 Rules:
 
-- Test classes should express business behavior, not Selenium mechanics.
-- Locators belong in page objects.
-- Common waits belong in wait utilities.
-- Browser setup belongs in driver factory/base test classes.
-- Test data should be externalized when it starts growing.
-- Screenshots should be captured automatically on failure.
-- Use headless mode for CI.
-- Start with one browser for stability, then expand only when required.
+- Test classes describe behavior, not Selenium mechanics.
+- Locators live in page objects.
+- Common waits live in wait utilities.
+- Browser setup lives in driver/base classes.
+- Screenshots are captured on UI failure.
+- Use headless mode in CI.
+- Start with one browser; expand only when required.
 
-## 7. Test Data Management
+## 8. Test Data
 
-Keep small test data in properties files when key-value format is enough.
+- Keep small key-value data in `.properties` files.
+- Use JSON or CSV when data becomes nested or table-shaped.
+- Use Excel or database-backed data only when the project truly needs it.
+- Keep test data named by scenario, not by implementation detail.
+- Avoid hardcoding growing datasets inside test methods.
 
 Example:
 
 ```properties
 integer.addition.inputs=2,3
 integer.addition.expected=5
-decimal.addition.inputs=2.5,3.25
-decimal.addition.expected=5.75
-text.concatenation.inputs=Hello ,World
-text.concatenation.expected=Hello World
+text.concat.inputs=Hello ,World
+text.concat.expected=Hello World
 ```
 
-Use a `TestData` utility class to load and expose named data objects.
+## 9. Reports And Evidence
 
-Move to JSON, CSV, Excel, or database-backed test data only when the project genuinely needs it.
+Every serious automation setup should produce readable evidence.
 
-## 8. Reporting Standards
+Minimum outputs:
 
-Every automation framework should produce human-readable and machine-readable reports.
-
-Minimum reports:
-
-- TestNG/Surefire reports under `target/surefire-reports`.
-- ExtentReports HTML report under `target/extent-reports`.
-- Screenshots under `target/screenshots`.
+- Surefire/TestNG reports under `target/surefire-reports`.
+- UI HTML report under `target/extent-reports` when UI tests exist.
+- Failure screenshots under `target/screenshots` when UI tests exist.
 - JaCoCo coverage report under `target/site/jacoco`.
+- Static analysis and dependency scan reports under `target`.
 
-ExtentReports should include:
+Reports should show:
 
-- Test name.
-- Test status.
+- Test name and status.
 - Failure reason.
 - Screenshot for UI failures.
-- Browser/environment information.
-- Suite or category information.
+- Browser/environment details for UI runs.
+- Suite/category information when useful.
 
-## 9. Coverage Standards
+## 10. Coverage
 
 Use JaCoCo for Java line and branch coverage.
 
-Important rule:
+Principles:
 
-- JaCoCo measures `src/main` application code.
-- Tests from `src/test` execute the application code.
-- Test classes themselves should not be the coverage target.
-
-Recommended command:
-
-```powershell
-.\mvnw.cmd clean verify "-Pcoverage"
-```
-
-Recommended coverage scope:
-
-- Include service and business logic classes.
-- Include DTOs if they are part of the API contract.
-- Exclude local server adapters, Lambda adapters, report generators, and framework glue unless they contain meaningful logic.
+- Measure `src/main` application code, not test classes.
+- Prioritize service/domain classes and API contracts.
+- Exclude adapters, generated code, report generators, and framework glue unless they contain meaningful logic.
+- Review missed coverage instead of chasing 100%.
 
 Suggested targets:
 
 - Line coverage: `85%+`
 - Branch coverage: `70%+`
 
-Do not chase 100% blindly. Evaluate every missed line:
+Ask for every meaningful miss:
 
 - Is it business critical?
 - Is it an error path users may hit?
 - Is it a boundary condition?
-- Is it adapter code better covered by integration tests?
-- Is it generated/simple getter-setter code with low risk?
+- Is it better covered by integration/UI tests?
 
-## 10. Static Analysis Standards
+## 11. Static Analysis
 
-Use static analysis to catch defects, duplication, and maintainability issues before review.
+For Java projects, use:
 
-For Java projects, include:
+- Checkstyle for style and conventions.
+- PMD for maintainability and complexity issues.
+- CPD for duplication.
+- SpotBugs for likely defects.
+- SonarQube or SonarCloud when the project needs consolidated tracking.
 
-- Checkstyle for coding conventions.
-- PMD for code smells, complexity, and maintainability issues.
-- CPD for duplicated logic.
-- SpotBugs for likely defects and risky implementation patterns.
-- SonarQube or SonarCloud for consolidated code quality, duplication, coverage, and maintainability tracking.
+Minimum quality bar:
 
-Minimum expectations:
-
-- No blocker or critical issues.
-- No high-priority SpotBugs findings unless explicitly justified.
-- No duplicated logic above the agreed threshold without review.
+- No blocker or critical findings.
+- No high-priority SpotBugs findings without documented reason.
+- Duplication reviewed before merge.
 - Complexity warnings reviewed before merge.
-- AI-generated code must receive extra scrutiny for duplicate methods, overlong classes, dead code, and weak abstractions.
+- AI-generated code reviewed for repeated methods, dead code, weak abstractions, and overlong classes.
 
-Recommended commands:
+## 12. Security
 
-```powershell
-.\mvnw.cmd verify "-Pquality"
-```
+Treat security checks as part of normal engineering, not a final phase.
 
-Optional SonarQube/SonarCloud command:
+Checklist:
 
-```powershell
-.\mvnw.cmd clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar "-Dsonar.token=$env:SONAR_TOKEN"
-```
-
-## 11. Security Quality Checklist
-
-Treat security as a shift-left activity, especially for cloud-hosted apps.
-
-Minimum checklist:
-
-- Validate and sanitize external inputs.
-- Avoid secrets, tokens, passwords, and credentials in source control.
-- Validate authentication and authorization on protected APIs.
+- Validate external inputs.
+- Keep secrets out of source control.
 - Scan dependencies for known vulnerabilities.
-- Review API error responses for stack traces or sensitive internal details.
-- Review logs for sensitive data leakage.
-- Use OWASP Dependency-Check or an equivalent dependency scanner.
-- Document any vulnerability suppression with a reason and expiry date.
+- Review suppressions with a reason and expiry date.
+- Do not return stack traces or internal details to users.
+- Do not log passwords, tokens, PII, or full auth headers.
+- Validate authentication and authorization for protected APIs.
+- Use least-privilege permissions for cloud resources.
 
-Recommended command:
-
-```powershell
-.\mvnw.cmd verify "-Psecurity-scan"
-```
-
-For IAM/auth-heavy applications, also cover:
-
-- Role and permission boundaries.
-- Session expiry and token validation.
-- Unauthorized and forbidden access paths.
-- Least-privilege cloud permissions.
-
-## 12. Logging And Observability Standards
-
-Cloud-native applications need logs that support debugging, operations, and audit review.
-
-Guidelines:
+## 13. Logging And Observability
 
 - Prefer structured logs for production services.
-- Include correlation IDs or request IDs for API flows.
-- Use consistent severity levels such as `INFO`, `WARN`, and `ERROR`.
-- Do not log secrets, tokens, passwords, PII, or full authentication headers.
-- Keep logs CloudWatch/Splunk-ready by using predictable fields and timestamps.
-- Preserve enough context to investigate failures without exposing sensitive data.
-- For Lambda/API Gateway systems, pass or create a request correlation ID at the edge and include it in downstream logs.
+- Include correlation/request IDs for API flows.
+- Use consistent levels such as `INFO`, `WARN`, and `ERROR`.
+- Log enough context to debug failures.
+- Never log secrets or sensitive personal data.
+- Keep logs compatible with CloudWatch, Splunk, or the chosen platform.
+- Add production-grade logging before cloud deployment; do not overbuild it for a tiny practice app.
 
-Do not force a heavy production logging framework into a small practice app unless the app needs it. Add the standard before production deployment.
-
-## 13. Boundary And Edge Case Discipline
-
-For every feature, think beyond the happy path.
-
-Include:
-
-- Minimum valid input.
-- Maximum valid input.
-- Empty input.
-- Null input where applicable.
-- Invalid format.
-- Multiple values.
-- Large values.
-- Overflow/underflow.
-- Special decimal values such as NaN and infinity.
-- Duplicate submissions.
-- User-visible success and failure messages.
-
-For UI flows, validate both:
-
-- The calculated result.
-- The message or state shown to the user.
-
-## 14. Configuration Over Hardcoding
-
-Values that change across environments should not be hardcoded.
-
-Make these configurable:
-
-- Base URL.
-- Headless mode.
-- Browser timeout.
-- API base URL.
-- Allowed CORS origin.
-- Report output paths if needed.
-- Email/reporting credentials, if implemented later.
-
-Prefer this order:
-
-1. System property or environment variable.
-2. Test/application properties file.
-3. Safe local default.
-
-## 15. Error Handling Standards
-
-Good error handling should be predictable and testable.
-
-Guidelines:
+## 14. Error Handling
 
 - Validate inputs early.
-- Return consistent error response formats.
-- Do not leak stack traces to the frontend.
-- Log useful server-side details.
-- Keep user-facing messages clear.
-- Test both success and failure responses.
+- Fail with clear, consistent messages.
+- Keep user-facing errors safe and concise.
+- Log server-side details where useful.
+- Test both success and failure paths.
+- Keep error contracts stable so clients and tests can rely on them.
 
-## 16. Code Quality Standards
+## 15. Code Quality
 
-Follow these rules before calling a feature complete:
+Before calling a feature complete:
 
-- Keep methods small and focused.
-- Give classes one clear responsibility.
-- Prefer explicit names over clever names.
-- Avoid duplicated logic.
-- Avoid manual string parsing when libraries exist.
-- Keep comments meaningful and limited.
-- Do not mix unrelated refactors with feature changes.
-- Do not leave temporary debug code.
-- Keep generated files and reports out of source control unless intentionally needed.
-- Run static analysis before considering a feature complete.
+- Methods are small and focused.
+- Classes have one clear responsibility.
+- Names are explicit and readable.
+- Duplicated logic is removed or justified.
+- Libraries are used for parsing/serialization instead of manual string handling.
+- Comments explain non-obvious decisions only.
+- Temporary debug code is removed.
+- README/docs are updated when behavior, setup, or architecture changes.
 
-## 17. Review Checklist
+## 16. Review Checklist
 
-Before merging or pushing a change, check:
+Before merge or handoff:
 
-- Does the app still compile?
-- Do unit and service tests pass?
-- Do UI smoke tests pass where applicable?
-- Do static quality checks pass or have reviewed findings?
-- Has dependency/security scanning been reviewed?
-- Are logs free of secrets and sensitive data?
-- Are reports generated correctly?
-- Is coverage acceptable for the changed area?
-- Is test data externalized if it is likely to grow?
-- Are frontend, backend, and test responsibilities separated?
-- Are environment-specific values configurable?
-- Is the README updated with new commands or setup steps?
-- Are docs updated when architecture changes?
+- App compiles.
+- Unit and service/API tests pass.
+- UI smoke tests pass when the feature is user-facing.
+- Coverage was generated and reviewed.
+- Static analysis passed or findings were reviewed.
+- Dependency/security scan passed or findings were documented.
+- Logs and errors do not leak sensitive data.
+- Reports are generated correctly.
+- Environment-specific values are configurable.
+- README and relevant docs are current.
 
-## 18. Suggested Maven Commands
+## 17. Recommended Maven Commands
 
-Compile:
+Compile tests:
 
 ```powershell
 .\mvnw.cmd test-compile
 ```
 
-Run all configured tests:
+Run tests:
 
 ```powershell
 .\mvnw.cmd test
-```
-
-Run fast core/API tests:
-
-```powershell
-.\mvnw.cmd "-Dtest=ValueCombinerUnitTest,ValueCombinerServiceTest" test
 ```
 
 Run coverage:
@@ -490,64 +346,56 @@ Run dependency/security scan:
 .\mvnw.cmd verify "-Psecurity-scan"
 ```
 
-Run SonarQube/SonarCloud analysis:
+Run Sonar analysis:
 
 ```powershell
 .\mvnw.cmd clean verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar "-Dsonar.token=$env:SONAR_TOKEN"
 ```
 
-Start local app:
+Start a local Java app when configured with `exec-maven-plugin`:
 
 ```powershell
 .\mvnw.cmd compile exec:java
 ```
 
-Start local app on a different port:
-
-```powershell
-.\mvnw.cmd compile exec:java "-Dexec.args=8081"
-```
-
-Run UI tests against a different URL:
+Run tests against a custom local URL:
 
 ```powershell
 .\mvnw.cmd test "-DbaseUrl=http://localhost:8081" "-Dheadless=true"
 ```
 
-## 19. Definition Of Done
+## 18. Definition Of Done
 
 A feature is done when:
 
-- The implementation works locally.
-- Unit/service tests cover core logic.
-- UI tests cover the critical user journey if the feature is user-facing.
-- Failure paths are tested where meaningful.
-- Coverage has been reviewed, not just generated.
-- Static analysis has been run and reviewed.
-- Dependency/security scan findings are fixed or documented.
-- Logging and error handling do not expose sensitive data.
+- It works locally.
+- Core logic has unit/service coverage.
+- User-facing behavior has smoke coverage where practical.
+- Important failure paths are tested.
+- Coverage, static analysis, and dependency scan results are reviewed.
+- Error handling and logs are safe.
 - Reports are available.
 - Documentation is updated.
-- The code is committed with a clear message.
+- The change is committed with a clear message when the work is ready to share.
 
-## 20. Recommended First-Cut Project Setup
+## 19. First-Cut Setup For New Java Web Projects
 
-For any new Java web project, start with:
+Start with:
 
-- Maven wrapper.
+- Maven Wrapper.
+- Java 17 compiler release.
 - Clear `src/main` and `src/test` separation.
 - Separate frontend files.
 - Service layer for business logic.
 - DTOs for request/response contracts.
-- Local web server or controller adapter.
-- Cloud adapter if deployment target is known.
-- TestNG or JUnit test suite.
-- Selenium Page Object framework if UI testing is needed.
-- ExtentReports for UI reporting.
-- JaCoCo profile for coverage.
-- Checkstyle, PMD, CPD, and SpotBugs profiles for static quality.
-- OWASP Dependency-Check profile for dependency scanning.
-- Logging and observability standards before cloud deployment.
-- README with run, test, coverage, and deployment instructions.
+- Local adapter such as web server/controller.
+- Cloud adapter only when the deployment target is known.
+- TestNG or JUnit for tests.
+- Selenium Page Object framework only when UI testing is needed.
+- ExtentReports or equivalent UI report when UI tests exist.
+- JaCoCo coverage profile.
+- Checkstyle, PMD/CPD, and SpotBugs quality profile.
+- OWASP Dependency-Check or equivalent security scan profile.
+- README with setup, run, test, coverage, and quality commands.
 
-Build the smallest useful version first, then expand coverage and framework capability as the app grows.
+Build the smallest useful version first. Add heavier framework pieces only when they reduce risk or save repeated work.
